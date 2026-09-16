@@ -1,1 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3リールスロット</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background:
+        radial-gradient(circle at top, #5d1a8d, #170622 70%);
+      font-family:
+        -apple-system, BlinkMacSystemFont,
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic", sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    .game {
+      width: min(92vw, 650px);
+      padding: 30px 20px 35px;
+      text-align: center;
+      background: rgba(20, 10, 35, 0.9);
+      border: 3px solid #ffd54a;
+      border-radius: 25px;
+      box-shadow:
+        0 0 30px rgba(255, 213, 74, 0.35),
+        inset 0 0 30px rgba(255, 255, 255, 0.05);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 7vw, 46px);
+      color: #ffd54a;
+      text-shadow:
+        0 3px 0 #9b5800,
+        0 0 15px rgba(255, 213, 74, 0.7);
+    }
+
+    .message {
+      min-height: 35px;
+      margin-bottom: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .reels {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .reel {
+      width: 150px;
+      height: 150px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(#fff, #eee);
+      border: 6px solid #d99a00;
+      border-radius: 18px;
+      box-shadow:
+        inset 0 0 15px rgba(0, 0, 0, 0.25),
+        0 5px 10px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      font-size: 78px;
+      color: #222;
+    }
+
+    .reel.spinning {
+      animation: shake 0.08s linear infinite;
+    }
+
+    @keyframes shake {
+      0%   { transform: translateY(-4px); }
+      50%  { transform: translateY(4px); }
+      100% { transform: translateY(-4px); }
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .stop-button {
+      width: 150px;
+      padding: 15px 10px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(#ff5252, #c62828);
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #7f1d1d;
+      transition: 0.1s;
+    }
+
+    .stop-button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #7f1d1d;
+    }
+
+    .stop-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .start-button {
+      margin-top: 25px;
+      width: 80%;
+      max-width: 400px;
+      padding: 18px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #ffd740, #ff9800);
+      color: #4a2100;
+      font-size: 25px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow:
+        0 6px 0 #a85e00,
+        0 0 25px rgba(255, 193, 7, 0.5);
+    }
+
+    .start-button:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #a85e00;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      min-height: 30px;
+    }
+
+    /* 大当たり */
+    .jackpot {
+      animation: jackpot 0.45s ease-in-out infinite alternate;
+    }
+
+    @keyframes jackpot {
+      from {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      to {
+        transform: scale(1.08);
+        filter: brightness(1.5);
+      }
+    }
+
+    /* 紙吹雪 */
+    .confetti {
+      position: fixed;
+      top: -20px;
+      width: 10px;
+      height: 20px;
+      pointer-events: none;
+      z-index: 1000;
+      animation: fall linear forwards;
+    }
+
+    @keyframes fall {
+      to {
+        transform:
+          translate3d(var(--x), 110vh, 0)
+          rotate(720deg);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .game {
+        padding: 25px 10px 30px;
+      }
+
+      .reels {
+        gap: 7px;
+      }
+
+      .reel {
+        width: 29vw;
+        height: 29vw;
+        max-width: 130px;
+        max-height: 130px;
+        font-size: 55px;
+      }
+
+      .controls {
+        gap: 7px;
+      }
+
+      .stop-button {
+        width: 29vw;
+        max-width: 130px;
+        font-size: 16px;
+        padding: 13px 5px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="game" id="game">
+
+    <h1>🎰 SLOT 🎰</h1>
+
+    <div class="message" id="message">
+      スタートを押してください！
+    </div>
+
+    <div class="reels">
+      <div class="reel" id="reel0">🍅</div>
+      <div class="reel" id="reel1">🐈</div>
+      <div class="reel" id="reel2">🐦‍⬛</div>
+    </div>
+
+    <div class="controls">
+      <button class="stop-button" id="stop0" disabled>
+        STOP ①
+      </button>
+
+      <button class="stop-button" id="stop1" disabled>
+        STOP ②
+      </button>
+
+      <button class="stop-button" id="stop2" disabled>
+        STOP ③
+      </button>
+    </div>
+
+    <button class="start-button" id="start">
+      🎰 スタート！
+    </button>
+
+    <div class="result" id="result"></div>
+
+  </div>
+
+<script>
+
+  // ==========================
+  // 絵柄
+  // ==========================
+
+  const symbols = [
+    "🍅",  // トマト
+    "🐈",  // 猫
+    "🐦‍⬛", // カラス
+    "7️⃣",  // 7
+    "❤️",  // ハート
+    "🐟"   // 魚
+  ];
+
+  const reels = [
+    document.getElementById("reel0"),
+    document.getElementById("reel1"),
+    document.getElementById("reel2")
+  ];
+
+  const stopButtons = [
+    document.getElementById("stop0"),
+    document.getElementById("stop1"),
+    document.getElementById("stop2")
+  ];
+
+  const startButton = document.getElementById("start");
+  const message = document.getElementById("message");
+  const result = document.getElementById("result");
+  const game = document.getElementById("game");
+
+  let spinning = false;
+
+  let timers = [];
+
+  let currentSymbols = [0, 0, 0];
+
+  let stopped = [false, false, false];
+
+
+  // ==========================
+  // スタート
+  // ==========================
+
+  startButton.addEventListener("click", startGame);
+
+
+  function startGame() {
+
+    if (spinning) return;
+
+    spinning = true;
+
+    stopped = [false, false, false];
+
+    message.textContent = "STOPボタンを押してリールを止めよう！";
+
+    result.textContent = "";
+
+    game.classList.remove("jackpot");
+
+    // 紙吹雪を消す
+    document.querySelectorAll(".confetti").forEach(el => el.remove());
+
+    // 全リール開始
+    reels.forEach((reel, index) => {
+
+      reel.classList.add("spinning");
+
+      stopButtons[index].disabled = false;
+
+      timers[index] = setInterval(() => {
+
+        currentSymbols[index] =
+          Math.floor(Math.random() * symbols.length);
+
+        reels[index].textContent =
+          symbols[currentSymbols[index]];
+
+      }, 80);
+
+    });
+
+    startButton.disabled = true;
+  }
+
+
+  // ==========================
+  // STOP
+  // ==========================
+
+  stopButtons.forEach((button, index) => {
+
+    button.addEventListener("click", () => {
+      stopReel(index);
+    });
+
+  });
+
+
+  function stopReel(index) {
+
+    if (!spinning || stopped[index]) return;
+
+    clearInterval(timers[index]);
+
+    reels[index].classList.remove("spinning");
+
+    stopped[index] = true;
+
+    stopButtons[index].disabled = true;
+
+    // 全部停止した？
+    if (stopped.every(value => value === true)) {
+      finishGame();
+    }
+
+  }
+
+
+  // ==========================
+  // 結果判定
+  // ==========================
+
+  function finishGame() {
+
+    spinning = false;
+
+    startButton.disabled = false;
+
+    const [a, b, c] = currentSymbols;
+
+    if (a === b && b === c) {
+
+      // 大当たり！
+      message.textContent = "🎉 JACKPOT!!! 🎉";
+
+      result.textContent =
+        `${symbols[a]} ${symbols[b]} ${symbols[c]}  — 3つ揃った！`;
+
+      game.classList.add("jackpot");
+
+      playFanfare();
+
+      createConfetti();
+
+    } else {
+
+      message.textContent = "残念！";
+
+      result.textContent =
+        `${symbols[a]} ${symbols[b]} ${symbols[c]}`;
+
+    }
+
+  }
+
+
+  // ==========================
+  // 紙吹雪
+  // ==========================
+
+  function createConfetti() {
+
+    const colors = [
+      "#ff1744",
+      "#ffeb3b",
+      "#00e676",
+      "#00b0ff",
+      "#e040fb",
+      "#ff9100"
+    ];
+
+    for (let i = 0; i < 120; i++) {
+
+      const confetti = document.createElement("div");
+
+      confetti.className = "confetti";
+
+      confetti.style.left =
+        Math.random() * 100 + "vw";
+
+      confetti.style.backgroundColor =
+        colors[Math.floor(Math.random() * colors.length)];
+
+      confetti.style.setProperty(
+        "--x",
+        (Math.random() * 400 - 200) + "px"
+      );
+
+      confetti.style.animationDuration =
+        (Math.random() * 2 + 2) + "s";
+
+      confetti.style.animationDelay =
+        Math.random() * 0.5 + "s";
+
+      document.body.appendChild(confetti);
+
+      setTimeout(() => {
+        confetti.remove();
+      }, 5000);
+
+    }
+
+  }
+
+
+  // ==========================
+  // ファンファーレ
+  // Web Audio APIで簡易的に作る
+  // ==========================
+
+  function playFanfare() {
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContext) return;
+
+    const audioContext = new AudioContext();
+
+    const notes = [
+      { freq: 523.25, time: 0.00, duration: 0.18 },
+      { freq: 659.25, time: 0.18, duration: 0.18 },
+      { freq: 783.99, time: 0.36, duration: 0.18 },
+      { freq: 1046.50, time: 0.54, duration: 0.45 }
+    ];
+
+    notes.forEach(note => {
+
+      const oscillator =
+        audioContext.createOscillator();
+
+      const gain =
+        audioContext.createGain();
+
+      oscillator.type = "triangle";
+
+      oscillator.frequency.value = note.freq;
+
+      oscillator.connect(gain);
+
+      gain.connect(audioContext.destination);
+
+      const startTime =
+        audioContext.currentTime + note.time;
+
+      const endTime =
+        startTime + note.duration;
+
+      gain.gain.setValueAtTime(0.001, startTime);
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.25,
+        startTime + 0.02
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        endTime
+      );
+
+      oscillator.start(startTime);
+
+      oscillator.stop(endTime);
+
+    });
+
+  }
+
+</script>
+
+</body>
+</html>
 
